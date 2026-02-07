@@ -28,7 +28,7 @@ output := gd.Diff(old, new)
 
 // Customized diff
 output := gd.DiffWith(old, new,
-    gd.WithSideBySide(true),
+    gd.WithLayout(gd.LayoutSideBySide),
     gd.WithContextLines(5),
     gd.WithWidth(120),
 )
@@ -40,17 +40,31 @@ output := gd.DiffWith(old, new,
 
 | Option | Default | Description |
 |---|---|---|
+| `WithLayout(mode)` | LayoutInline | Layout mode (see below) |
 | `WithContextLines(n)` | 3 | Unchanged lines shown around each change |
-| `WithSideBySide(on)` | false | Side-by-side layout instead of inline |
 | `WithColor(on)` | auto | Force color on/off (auto-detects TTY) |
-| `WithWidth(cols)` | auto | Terminal width for side-by-side mode |
+| `WithWidth(cols)` | auto | Terminal width for side-by-side modes |
 
 Color auto-detection respects `NO_COLOR` and `FORCE_COLOR` environment variables.
+
+## Layouts
+
+- **LayoutInline** (default) - removals and additions on separate lines. Always shows full content.
+- **LayoutSideBySide** - old and new text in side-by-side panels. Lines that exceed terminal width are truncated.
+- **LayoutPreferSideBySide** - uses side-by-side when content fits within the terminal width, falls back to inline otherwise.
+
+```go
+// Always side-by-side
+gd.DiffWith(old, new, gd.WithLayout(gd.LayoutSideBySide))
+
+// Side-by-side when it fits, inline otherwise
+gd.DiffWith(old, new, gd.WithLayout(gd.LayoutPreferSideBySide))
+```
 
 ## Features
 
 - **Word-level emphasis** - changed words are highlighted within changed lines, not just the whole line
-- **Two layouts** - inline (unified) or side-by-side
+- **Three layouts** - inline, side-by-side, or auto-fallback
 - **ANSI-aware** - correctly handles input that already contains ANSI escape codes
 - **Wide character support** - CJK and other double-width characters are measured correctly
 - **Smart line pairing** - modified lines are paired using a greedy forward-search algorithm (inspired by [Delta](https://github.com/dandavison/delta))

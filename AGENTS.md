@@ -1,0 +1,1 @@
+- When releasing new versions, use the @dev script: `dev -r <patch|minor|major>`

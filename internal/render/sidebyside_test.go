@@ -8,6 +8,58 @@ import (
 	"github.com/amterp/go-delta/internal/diff"
 )
 
+func TestMeasureSideBySideWidth(t *testing.T) {
+	hunks := []align.AnnotatedHunk{
+		{
+			Hunk: diff.Hunk{
+				OldStart: 1, NewStart: 1,
+				Lines: []diff.Line{
+					{Kind: diff.OpEqual, Content: "same line"},
+				},
+			},
+		},
+	}
+	s := NoColorStyles()
+	width := MeasureSideBySideWidth(hunks, s)
+
+	// Build what we expect: "1 │   same line" on each side, plus " │ "
+	// Line num "1" = 1 char, " │ " = 3, "  same line" = 11 => panel = 15
+	// Total = 15 + 3 + 15 = 33
+	expected := 33
+	if width != expected {
+		t.Errorf("MeasureSideBySideWidth = %d, want %d", width, expected)
+	}
+}
+
+func TestMeasureSideBySideWidthAsymmetric(t *testing.T) {
+	hunks := []align.AnnotatedHunk{
+		{
+			Hunk: diff.Hunk{
+				OldStart: 1, NewStart: 1,
+				Lines: []diff.Line{
+					{Kind: diff.OpDelete, Content: "short"},
+					{Kind: diff.OpInsert, Content: "this is a much longer line"},
+				},
+			},
+		},
+	}
+	s := NoColorStyles()
+	width := MeasureSideBySideWidth(hunks, s)
+
+	// Left: "1 │ - short" = 1+3+7 = 11
+	// Right empty: "  │ ~" or "1 │ + this is a much longer line" = 1+3+28 = 32
+	// But the left also has the empty placeholder for the insert row.
+	// The measure should capture the widest of each panel.
+	if width <= 0 {
+		t.Errorf("MeasureSideBySideWidth should be positive, got %d", width)
+	}
+	// Verify no truncation happened by checking width is big enough
+	// to contain the longer line content
+	if width < 30 {
+		t.Errorf("expected width >= 30 for long content, got %d", width)
+	}
+}
+
 func TestRenderSideBySideEmpty(t *testing.T) {
 	result := RenderSideBySide(nil, NoColorStyles(), 80)
 	if result != "" {

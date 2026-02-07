@@ -15,33 +15,14 @@ type sbsItem struct {
 	right     string // right panel content
 }
 
-// RenderSideBySide produces a two-panel diff. Left panel shows old text,
-// right panel shows new text, separated by " │ ".
-//
-// Panels are sized to fit their content rather than always filling half
-// the terminal width. termWidth is used only as the truncation ceiling.
-func RenderSideBySide(hunks []align.AnnotatedHunk, s Styles, termWidth int) string {
-	if len(hunks) == 0 {
-		return ""
-	}
-
-	var maxPanelWidth int
-	if termWidth > 0 {
-		maxPanelWidth = (termWidth - 3) / 2 // 3 for " │ "
-		if maxPanelWidth < 10 {
-			maxPanelWidth = 10
-		}
-	}
-
+// buildSBSItems builds all panel content items from annotated hunks.
+// maxPanelWidth controls truncation; 0 means no truncation.
+// Returns the items and the maximum visible widths of the left and
+// right panels.
+func buildSBSItems(hunks []align.AnnotatedHunk, s Styles, maxPanelWidth int) (items []sbsItem, maxLeftVW, maxRightVW int) {
 	maxOld, maxNew := maxLineNumbers(hunks)
 	oldNumWidth := digitCount(maxOld)
 	newNumWidth := digitCount(maxNew)
-
-	// First pass: build all panel content (truncated, not padded) and
-	// track the actual max widths needed.
-	var items []sbsItem
-	maxLeftVW := 0
-	maxRightVW := 0
 
 	for i, h := range hunks {
 		if i > 0 {
@@ -106,6 +87,36 @@ func RenderSideBySide(hunks []align.AnnotatedHunk, s Styles, termWidth int) stri
 			items = append(items, sbsItem{left: left, right: right})
 		}
 	}
+
+	return items, maxLeftVW, maxRightVW
+}
+
+// MeasureSideBySideWidth returns the total terminal width needed to
+// render hunks in side-by-side mode without any truncation.
+func MeasureSideBySideWidth(hunks []align.AnnotatedHunk, s Styles) int {
+	_, maxLeftVW, maxRightVW := buildSBSItems(hunks, s, 0)
+	return maxLeftVW + 3 + maxRightVW
+}
+
+// RenderSideBySide produces a two-panel diff. Left panel shows old text,
+// right panel shows new text, separated by " │ ".
+//
+// Panels are sized to fit their content rather than always filling half
+// the terminal width. termWidth is used only as the truncation ceiling.
+func RenderSideBySide(hunks []align.AnnotatedHunk, s Styles, termWidth int) string {
+	if len(hunks) == 0 {
+		return ""
+	}
+
+	var maxPanelWidth int
+	if termWidth > 0 {
+		maxPanelWidth = (termWidth - 3) / 2 // 3 for " │ "
+		if maxPanelWidth < 1 {
+			maxPanelWidth = 1
+		}
+	}
+
+	items, maxLeftVW, maxRightVW := buildSBSItems(hunks, s, maxPanelWidth)
 
 	// Second pass: pad left panels to maxLeftVW, join with separator.
 	var b strings.Builder

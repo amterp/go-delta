@@ -149,13 +149,51 @@ func TestDiffHunkOnlyRemoves(t *testing.T) {
 func TestDiffSideBySideIntegration(t *testing.T) {
 	old := "hello world\ngoodbye"
 	new := "hello earth\ngoodbye"
-	result := DiffWith(old, new, WithColor(false), WithSideBySide(true), WithWidth(80))
+	result := DiffWith(old, new, WithColor(false), WithLayout(LayoutSideBySide), WithWidth(80))
 	if result == "" {
 		t.Fatal("side-by-side should produce output")
 	}
 	if !strings.Contains(result, " │ ") {
 		t.Errorf("expected panel separator, got:\n%s", result)
 	}
+}
+
+func TestDiffPreferSideBySideFitsUseSBS(t *testing.T) {
+	old := "aaa\nbbb"
+	new := "aaa\nccc"
+	result := DiffWith(old, new, WithColor(false), WithLayout(LayoutPreferSideBySide), WithWidth(200))
+	if result == "" {
+		t.Fatal("expected non-empty diff")
+	}
+	if !isSideBySide(result) {
+		t.Errorf("wide terminal should use SBS, got:\n%s", result)
+	}
+}
+
+func TestDiffPreferSideBySideNarrowFallsBackToInline(t *testing.T) {
+	// Use multi-line content with a shared context line to ensure both
+	// panels are wide enough that the SBS layout won't fit in 40 cols.
+	old := "context: the quick brown fox jumps\nold line here"
+	new := "context: the quick brown fox jumps\nnew line here"
+	result := DiffWith(old, new, WithColor(false), WithLayout(LayoutPreferSideBySide), WithWidth(40))
+	if result == "" {
+		t.Fatal("expected non-empty diff")
+	}
+	if isSideBySide(result) {
+		t.Errorf("narrow terminal should fall back to inline, got:\n%s", result)
+	}
+}
+
+// isSideBySide returns true if the output appears to be SBS format.
+// SBS lines have 3 "│" characters per content line (left gutter,
+// panel separator, right gutter), while inline has only 1.
+func isSideBySide(output string) bool {
+	for _, line := range strings.Split(output, "\n") {
+		if strings.Count(line, "│") >= 3 {
+			return true
+		}
+	}
+	return false
 }
 
 func TestDiffNegativeContextClampedToZero(t *testing.T) {

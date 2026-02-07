@@ -115,35 +115,35 @@ func TestSnapshotInlineUnpaired(t *testing.T) {
 func TestSnapshotSideBySideBasic(t *testing.T) {
 	old := "hello world\nfoo bar"
 	new := "hello earth\nfoo baz"
-	result := DiffWith(old, new, WithColor(false), WithSideBySide(true), WithWidth(80))
+	result := DiffWith(old, new, WithColor(false), WithLayout(LayoutSideBySide), WithWidth(80))
 	snapshotTest(t, "sbs_basic", result)
 }
 
 func TestSnapshotSideBySideUnmatched(t *testing.T) {
 	old := "only in old\nshared"
 	new := "shared\nonly in new"
-	result := DiffWith(old, new, WithColor(false), WithSideBySide(true), WithWidth(80))
+	result := DiffWith(old, new, WithColor(false), WithLayout(LayoutSideBySide), WithWidth(80))
 	snapshotTest(t, "sbs_unmatched", result)
 }
 
 func TestSnapshotSideBySideLongLine(t *testing.T) {
 	old := "short"
 	new := "this is a very long line that should exceed the panel width in an 80-column terminal and get truncated"
-	result := DiffWith(old, new, WithColor(false), WithSideBySide(true), WithWidth(80))
+	result := DiffWith(old, new, WithColor(false), WithLayout(LayoutSideBySide), WithWidth(80))
 	snapshotTest(t, "sbs_long_line", result)
 }
 
 func TestSnapshotSideBySideWideUnicode(t *testing.T) {
 	old := "hello 世界"
 	new := "hello 地球"
-	result := DiffWith(old, new, WithColor(false), WithSideBySide(true), WithWidth(80))
+	result := DiffWith(old, new, WithColor(false), WithLayout(LayoutSideBySide), WithWidth(80))
 	snapshotTest(t, "sbs_wide_unicode", result)
 }
 
 func TestSnapshotSideBySideColorBasic(t *testing.T) {
 	old := "hello world\nfoo bar"
 	new := "hello earth\nfoo baz"
-	result := DiffWith(old, new, WithColor(true), WithSideBySide(true), WithWidth(80))
+	result := DiffWith(old, new, WithColor(true), WithLayout(LayoutSideBySide), WithWidth(80))
 	snapshotTest(t, "sbs_color_basic", ansiToMarkers(result))
 }
 
@@ -164,13 +164,27 @@ func TestSnapshotSideBySideColorTruncation(t *testing.T) {
     "city": "Springfield",
   }
 }`
-	result := DiffWith(old, new, WithColor(true), WithSideBySide(true), WithWidth(72))
+	result := DiffWith(old, new, WithColor(true), WithLayout(LayoutSideBySide), WithWidth(72))
 	marked := ansiToMarkers(result)
 
 	// Every line should have its ANSI state properly closed.
 	// Specifically, the truncated hobbies line must end with a reset «0»
 	// before the newline, not bleed into subsequent lines.
 	snapshotTest(t, "sbs_color_truncation", marked)
+}
+
+func TestSnapshotPreferSBSFits(t *testing.T) {
+	old := "hello world"
+	new := "hello earth"
+	result := DiffWith(old, new, WithColor(false), WithLayout(LayoutPreferSideBySide), WithWidth(200))
+	snapshotTest(t, "prefer_sbs_fits", result)
+}
+
+func TestSnapshotPreferSBSDoesNotFit(t *testing.T) {
+	old := "hello world with some extra content here"
+	new := "hello earth with some extra content here"
+	result := DiffWith(old, new, WithColor(false), WithLayout(LayoutPreferSideBySide), WithWidth(40))
+	snapshotTest(t, "prefer_sbs_no_fit", result)
 }
 
 func TestSnapshotInlineCaretShift(t *testing.T) {

@@ -28,14 +28,29 @@ func runPipeline(old, new string, cfg config, styles render.Styles) string {
 	annotated := align.AnnotateHunks(hunks)
 
 	// Stage 3: rendering
-	if cfg.sideBySide {
+	switch cfg.layout {
+	case LayoutSideBySide:
 		width := cfg.width
 		if width <= 0 {
 			width = terminalWidth()
 		}
 		return render.RenderSideBySide(annotated, styles, width)
+
+	case LayoutPreferSideBySide:
+		width := cfg.width
+		if width <= 0 {
+			width = terminalWidth()
+		}
+		// Non-TTY (width 0): use SBS since there's no truncation concern.
+		// Otherwise: measure and fall back to inline if it won't fit.
+		if width > 0 && render.MeasureSideBySideWidth(annotated, styles) > width {
+			return render.RenderInline(annotated, styles)
+		}
+		return render.RenderSideBySide(annotated, styles, width)
+
+	default:
+		return render.RenderInline(annotated, styles)
 	}
-	return render.RenderInline(annotated, styles)
 }
 
 // terminalWidth detects the terminal width, returning 0 if detection
