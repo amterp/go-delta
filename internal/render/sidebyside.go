@@ -25,9 +25,12 @@ func RenderSideBySide(hunks []align.AnnotatedHunk, s Styles, termWidth int) stri
 		return ""
 	}
 
-	maxPanelWidth := (termWidth - 3) / 2 // 3 for " │ "
-	if maxPanelWidth < 10 {
-		maxPanelWidth = 10
+	var maxPanelWidth int
+	if termWidth > 0 {
+		maxPanelWidth = (termWidth - 3) / 2 // 3 for " │ "
+		if maxPanelWidth < 10 {
+			maxPanelWidth = 10
+		}
 	}
 
 	maxOld, maxNew := maxLineNumbers(hunks)
@@ -129,10 +132,13 @@ func RenderSideBySide(hunks []align.AnnotatedHunk, s Styles, termWidth int) stri
 }
 
 // sbsPanelContent formats one panel's content: "NN │ content", truncated
-// to maxWidth if needed. No trailing padding - that's applied in the
-// second pass.
+// to maxWidth if needed. When maxWidth <= 0, no truncation is applied.
+// No trailing padding - that's applied in the second pass.
 func sbsPanelContent(numStr, content string, maxWidth int) string {
 	inner := numStr + " │ " + content
+	if maxWidth <= 0 {
+		return inner
+	}
 	vl := visibleWidth(inner)
 	if vl <= maxWidth {
 		return inner

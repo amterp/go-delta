@@ -46,8 +46,8 @@ func WithColor(on bool) Option {
 }
 
 // WithWidth sets the terminal width used for side-by-side layout.
-// Default is 0, which auto-detects from the terminal (fallback 80).
-// Ignored in inline mode.
+// Default is 0, which auto-detects from the terminal. If detection
+// fails (non-TTY), panels are not truncated. Ignored in inline mode.
 func WithWidth(cols int) Option {
 	return func(c *config) {
 		if cols < 0 {

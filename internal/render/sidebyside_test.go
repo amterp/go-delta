@@ -148,6 +148,30 @@ func TestRenderSideBySideNarrowTerminal(t *testing.T) {
 	}
 }
 
+func TestRenderSideBySideNoTruncationWhenZeroWidth(t *testing.T) {
+	longContent := strings.Repeat("x", 200)
+	hunks := []align.AnnotatedHunk{
+		{
+			Hunk: diff.Hunk{
+				OldStart: 1, NewStart: 1,
+				Lines: []diff.Line{
+					{Kind: diff.OpEqual, Content: longContent},
+				},
+			},
+		},
+	}
+	result := RenderSideBySide(hunks, NoColorStyles(), 0)
+	if result == "" {
+		t.Fatal("zero width should still produce output")
+	}
+	if strings.Contains(result, "…") {
+		t.Errorf("zero width should not truncate, got:\n%s", result)
+	}
+	if !strings.Contains(result, longContent) {
+		t.Error("long content should appear untruncated")
+	}
+}
+
 func TestRenderSideBySideLongLineTruncated(t *testing.T) {
 	longContent := strings.Repeat("x", 200)
 	hunks := []align.AnnotatedHunk{

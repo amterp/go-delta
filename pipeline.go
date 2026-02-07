@@ -38,11 +38,12 @@ func runPipeline(old, new string, cfg config, styles render.Styles) string {
 	return render.RenderInline(annotated, styles)
 }
 
-// terminalWidth detects the terminal width, falling back to 80.
+// terminalWidth detects the terminal width, returning 0 if detection
+// fails. A zero value tells the renderer to skip truncation.
 func terminalWidth() int {
 	w, _, err := term.GetSize(int(os.Stdout.Fd()))
 	if err != nil || w <= 0 {
-		return 80
+		return 0
 	}
 	return w
 }
