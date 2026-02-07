@@ -1,0 +1,52 @@
+#!/usr/bin/env rad
+---
+Development helper for go-delta.
+---
+args:
+    validate v bool   # Lint, vet, and test
+    release r str?    # Release a new version (patch, minor, major)
+    build b bool    # Build the project
+
+    release enum ["patch", "minor", "major"]
+
+if validate or release != null:
+    print("Running go vet...")
+    $`go vet ./...`
+    print("Running tests...")
+    $`go test ./...`
+    print("All checks passed.")
+
+if build or release != null:
+    print("Building...")
+    $`go build ./...`
+    print("Build succeeded.")
+
+if release != null:
+    // Get latest tag, default to v0.0.0 if none
+    stdout = quiet $`git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0"`
+    latest = stdout.trim()
+
+    // Parse semver components
+    parts = latest[1:].split(".")
+    major = parts[0].parse_int() ?? 0
+    minor = parts[1].parse_int() ?? 0
+    patch = parts[2].parse_int() ?? 0
+
+    switch release:
+        case "major":
+            major += 1
+            minor = 0
+            patch = 0
+        case "minor":
+            minor += 1
+            patch = 0
+        case "patch":
+            patch += 1
+
+    new_tag = "v{major}.{minor}.{patch}"
+
+    print("Current: {latest}")
+    print("New:     {new_tag}")
+    $`git tag {new_tag}`
+    $`git push origin {new_tag}`
+    print("Released {new_tag}.")
