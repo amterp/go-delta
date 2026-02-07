@@ -27,7 +27,7 @@ if release != null:
     latest = stdout.trim()
 
     // Parse semver components
-    parts = latest[1:].split(".")
+    parts = latest[1:].split("\\.")
     major = parts[0].parse_int() ?? 0
     minor = parts[1].parse_int() ?? 0
     patch = parts[2].parse_int() ?? 0
