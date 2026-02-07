@@ -194,6 +194,8 @@ func truncateToWidth(s string, maxWidth int) string {
 	var b strings.Builder
 	width := 0
 	state := ansiNone
+	sawAnsi := false
+	truncated := false
 
 	for _, r := range s {
 		prevState := state
@@ -201,6 +203,7 @@ func truncateToWidth(s string, maxWidth int) string {
 
 		if state != ansiNone {
 			// Inside an escape sequence - always emit
+			sawAnsi = true
 			b.WriteRune(r)
 			continue
 		}
@@ -215,10 +218,15 @@ func truncateToWidth(s string, maxWidth int) string {
 			if width < maxWidth {
 				b.WriteRune(' ')
 			}
+			truncated = true
 			break
 		}
 		b.WriteRune(r)
 		width += rw
+	}
+
+	if sawAnsi && truncated {
+		b.WriteString("\x1b[0m")
 	}
 
 	return b.String()

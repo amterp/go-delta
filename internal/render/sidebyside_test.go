@@ -174,6 +174,39 @@ func TestRenderSideBySideLongLineTruncated(t *testing.T) {
 	}
 }
 
+func TestTruncateToWidthAppendsResetWhenTruncatingANSI(t *testing.T) {
+	// Simulate what happens in SBS: a styled line gets truncated.
+	// The reset (\x1b[0m) that closes the style is in the truncated portion,
+	// so truncateToWidth must append its own reset to prevent color bleed.
+	styled := "\x1b[32;7mhello world\x1b[0m"
+	result := truncateToWidth(styled, 5)
+
+	// Must end with a reset sequence
+	if !strings.HasSuffix(result, "\x1b[0m") {
+		t.Errorf("truncated ANSI string should end with reset, got %q", result)
+	}
+	if visibleWidth(result) != 5 {
+		t.Errorf("expected visible width 5, got %d for %q", visibleWidth(result), result)
+	}
+}
+
+func TestTruncateToWidthNoResetWhenNotTruncated(t *testing.T) {
+	// If the string fits, no reset should be appended
+	styled := "\x1b[31mhi\x1b[0m"
+	result := truncateToWidth(styled, 10)
+	if result != styled {
+		t.Errorf("non-truncated string should be unchanged, got %q", result)
+	}
+}
+
+func TestTruncateToWidthNoResetWhenNoANSI(t *testing.T) {
+	// Plain text truncation should not get a spurious reset
+	result := truncateToWidth("hello world", 5)
+	if strings.Contains(result, "\x1b") {
+		t.Errorf("plain truncated string should not contain ANSI, got %q", result)
+	}
+}
+
 // --- visibleWidth and truncateToWidth tests ---
 
 func TestVisibleWidthASCII(t *testing.T) {

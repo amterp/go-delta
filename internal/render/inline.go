@@ -28,7 +28,11 @@ func RenderInline(hunks []align.AnnotatedHunk, s Styles) string {
 		}
 
 		if h.Skipped > 0 {
-			sep := fmt.Sprintf("~~~ %d lines skipped ~~~", h.Skipped)
+			noun := "lines"
+			if h.Skipped == 1 {
+				noun = "line"
+			}
+			sep := fmt.Sprintf("~~~ %d %s skipped ~~~", h.Skipped, noun)
 			b.WriteString(s.Separator(sep))
 			b.WriteString("\n\n")
 		}

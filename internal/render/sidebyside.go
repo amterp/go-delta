@@ -32,7 +32,11 @@ func RenderSideBySide(hunks []align.AnnotatedHunk, s Styles, termWidth int) stri
 		}
 
 		if h.Skipped > 0 {
-			line := fmt.Sprintf("~~~ %d lines skipped ~~~", h.Skipped)
+			noun := "lines"
+			if h.Skipped == 1 {
+				noun = "line"
+			}
+			line := fmt.Sprintf("~~~ %d %s skipped ~~~", h.Skipped, noun)
 			centered := centerPad(s.Separator(line), termWidth)
 			b.WriteString(centered)
 			b.WriteString("\n\n")

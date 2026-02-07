@@ -4,6 +4,7 @@ import (
 	"flag"
 	"os"
 	"path/filepath"
+	"regexp"
 	"testing"
 )
 
@@ -35,6 +36,14 @@ func snapshotTest(t *testing.T, name string, result string) {
 		t.Errorf("output does not match snapshot %s\n--- expected ---\n%s\n--- got ---\n%s",
 			path, string(expected), result)
 	}
+}
+
+// ansiToMarkers replaces ANSI SGR sequences with readable markers.
+// e.g. \x1b[31m -> «31», \x1b[0m -> «0», \x1b[32;7m -> «32;7»
+var sgrRe = regexp.MustCompile(`\x1b\[([0-9;]*)m`)
+
+func ansiToMarkers(s string) string {
+	return sgrRe.ReplaceAllString(s, `«$1»`)
 }
 
 // --- Snapshot tests ---
@@ -129,4 +138,37 @@ func TestSnapshotSideBySideWideUnicode(t *testing.T) {
 	new := "hello 地球"
 	result := DiffWith(old, new, WithColor(false), WithSideBySide(true), WithWidth(80))
 	snapshotTest(t, "sbs_wide_unicode", result)
+}
+
+func TestSnapshotSideBySideColorBasic(t *testing.T) {
+	old := "hello world\nfoo bar"
+	new := "hello earth\nfoo baz"
+	result := DiffWith(old, new, WithColor(true), WithSideBySide(true), WithWidth(80))
+	snapshotTest(t, "sbs_color_basic", ansiToMarkers(result))
+}
+
+func TestSnapshotSideBySideColorTruncation(t *testing.T) {
+	// Reproduce the exact bug from the demo: emphasis on a paired line
+	// gets truncated, and the reset that would close the emphasis is lost.
+	old := `{
+  "name": "Alice",
+  "hobbies": ["reading", "hiking"],
+  "address": {
+    "city": "Springfield",
+  }
+}`
+	new := `{
+  "name": "Bob",
+  "hobbies": ["reading", "cycling", "cooking", "gaming"],
+  "address": {
+    "city": "Springfield",
+  }
+}`
+	result := DiffWith(old, new, WithColor(true), WithSideBySide(true), WithWidth(72))
+	marked := ansiToMarkers(result)
+
+	// Every line should have its ANSI state properly closed.
+	// Specifically, the truncated hobbies line must end with a reset «0»
+	// before the newline, not bleed into subsequent lines.
+	snapshotTest(t, "sbs_color_truncation", marked)
 }
