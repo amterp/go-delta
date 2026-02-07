@@ -16,7 +16,7 @@ type Token struct {
 // Rules:
 //   - Runs of word characters (\w: letters, digits, underscore) form tokens
 //   - Each non-word, non-space character is its own token
-//   - Runs of whitespace form tokens
+//   - Each whitespace character is its own token (for precise NW alignment)
 //
 // The tokenization is lossless: joining all token texts reproduces the
 // original line exactly.

@@ -86,7 +86,19 @@ func Align(oldTokens, newTokens []Token) Alignment {
 	matches, deletions, insertions := 0, 0, 0
 
 	for i > 0 || j > 0 {
-		if i > 0 && j > 0 && oldTokens[i-1].Text == newTokens[j-1].Text &&
+		if i > 0 && dp[i][j] == dp[i-1][j]+1 {
+			// deletion - checked before match so that deletions
+			// in runs of identical tokens land at the end of the
+			// run rather than clustering at the start
+			oldAligned = append(oldAligned, AlignedToken{Op: AlignDelete, Token: oldTokens[i-1]})
+			deletions++
+			i--
+		} else if j > 0 && dp[i][j] == dp[i][j-1]+1 {
+			// insertion - same reasoning as deletion
+			newAligned = append(newAligned, AlignedToken{Op: AlignInsert, Token: newTokens[j-1]})
+			insertions++
+			j--
+		} else if i > 0 && j > 0 && oldTokens[i-1].Text == newTokens[j-1].Text &&
 			dp[i][j] == dp[i-1][j-1] {
 			// match
 			oldAligned = append(oldAligned, AlignedToken{Op: AlignMatch, Token: oldTokens[i-1]})
@@ -103,13 +115,10 @@ func Align(oldTokens, newTokens []Token) Alignment {
 			insertions++
 			i--
 			j--
-		} else if i > 0 && dp[i][j] == dp[i-1][j]+1 {
-			// deletion
-			oldAligned = append(oldAligned, AlignedToken{Op: AlignDelete, Token: oldTokens[i-1]})
-			deletions++
-			i--
 		} else {
-			// insertion
+			// fallback: j > 0 is guaranteed here because the DP
+			// boundary values ensure the delete/insert branches
+			// above catch all i>0,j==0 and i==0,j>0 cases.
 			newAligned = append(newAligned, AlignedToken{Op: AlignInsert, Token: newTokens[j-1]})
 			insertions++
 			j--
