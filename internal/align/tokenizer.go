@@ -49,18 +49,15 @@ func Tokenize(line string) []Token {
 			i = j
 
 		case unicode.IsSpace(r):
-			// consume whitespace run
-			j := i + 1
-			for j < len(runes) && unicode.IsSpace(runes[j]) {
-				j++
-			}
-			end := byteOffset(runes, j)
+			// individual whitespace characters so NW can align
+			// runs that differ by only a few characters
+			end := byteOffset(runes, i+1)
 			tokens = append(tokens, Token{
 				Text:  line[start:end],
 				Start: start,
 				End:   end,
 			})
-			i = j
+			i++
 
 		default:
 			// single punctuation/operator character

@@ -29,7 +29,7 @@ func TestTokenizeJSON(t *testing.T) {
 
 func TestTokenizeWhitespace(t *testing.T) {
 	tokens := Tokenize("  a  b  ")
-	assertTokenTexts(t, tokens, []string{"  ", "a", "  ", "b", "  "})
+	assertTokenTexts(t, tokens, []string{" ", " ", "a", " ", " ", "b", " ", " "})
 }
 
 func TestTokenizeUnderscore(t *testing.T) {

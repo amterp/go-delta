@@ -172,3 +172,27 @@ func TestSnapshotSideBySideColorTruncation(t *testing.T) {
 	// before the newline, not bleed into subsequent lines.
 	snapshotTest(t, "sbs_color_truncation", marked)
 }
+
+func TestSnapshotInlineCaretShift(t *testing.T) {
+	old := `  --> <script>:2:25
+  |
+1 |
+2 | for idx, item, extra in [1, 2, 3]:
+  |                         ^^^^^^^^^
+3 |     print(idx, item, extra)
+  |
+   = help: The for-loop syntax changed. Use: for item in items with loop: print(loop.idx, item). See: https://amterp.github.io/rad/migrations/v0.7/
+   = info: rad explain RAD20033`
+	new := `error[RAD20033]: Cannot unpack "int" into 3 values
+  --> <script>:2:25
+  |
+1 |
+2 | for idx, item, extra in [1, 2, 3]:
+  |                          ^^^^^^^
+3 |     print(idx, item, extra)
+  |
+   = help: The for-loop syntax changed. Use: for item in items with loop: print(loop.idx, item). See: https://amterp.github.io/rad/migrations/v0.7/
+   = info: rad explain RAD20033`
+	result := DiffWith(old, new, WithColor(true))
+	snapshotTest(t, "inline_caret_shift", ansiToMarkers(result))
+}

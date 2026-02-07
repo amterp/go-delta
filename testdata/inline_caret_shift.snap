@@ -1,0 +1,10 @@
+  «2»1«22» «2»│«22» «32»+ error[RAD20033]: Cannot unpack "int" into 3 values«0»
+«2»1«22» «2»2«22» «2»│«22»     --> <script>:2:25
+«2»2«22» «2»3«22» «2»│«22»     |
+«2»3«22» «2»4«22» «2»│«22»   1 |
+«2»4«22» «2»5«22» «2»│«22»   2 | for idx, item, extra in [1, 2, 3]:
+«2»5«22»   «2»│«22» «31»- «0»«31»  |                         «0»«31;7»^^«0;27»«31»^^^^^^^«0»
+  «2»6«22» «2»│«22» «32»+ «0»«32»  |                         «0»«32;7» «0;27»«32»^^^^^^^«0»
+«2»6«22» «2»7«22» «2»│«22»   3 |     print(idx, item, extra)
+«2»7«22» «2»8«22» «2»│«22»     |
+«2»8«22» «2»9«22» «2»│«22»      = help: The for-loop syntax changed. Use: for item in items with loop: print(loop.idx, item). See: https://amterp.github.io/rad/migrations/v0.7/
