@@ -44,12 +44,12 @@ func runPipeline(old, new string, cfg config, styles render.Styles) string {
 		// Non-TTY (width 0): use SBS since there's no truncation concern.
 		// Otherwise: measure and fall back to inline if it won't fit.
 		if width > 0 && render.MeasureSideBySideWidth(annotated, styles) > width {
-			return render.RenderInline(annotated, styles)
+			return render.RenderInline(annotated, styles, 0)
 		}
 		return render.RenderSideBySide(annotated, styles, width)
 
 	default:
-		return render.RenderInline(annotated, styles)
+		return render.RenderInline(annotated, styles, cfg.width)
 	}
 }
 

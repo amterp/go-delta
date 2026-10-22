@@ -43,7 +43,7 @@ output := gd.DiffWith(old, new,
 | `WithLayout(mode)` | LayoutInline | Layout mode (see below) |
 | `WithContextLines(n)` | 3 | Unchanged lines shown around each change |
 | `WithColor(on)` | auto | Force color on/off (auto-detects TTY) |
-| `WithWidth(cols)` | auto | Terminal width for side-by-side modes |
+| `WithWidth(cols)` | 0 | Wrap inline lines at this width; auto-detect width for side-by-side modes when 0 |
 
 Color auto-detection respects `NO_COLOR` and `FORCE_COLOR` environment variables.
 
@@ -52,6 +52,8 @@ Color auto-detection respects `NO_COLOR` and `FORCE_COLOR` environment variables
 - **LayoutInline** (default) - removals and additions on separate lines. Always shows full content.
 - **LayoutSideBySide** - old and new text in side-by-side panels. Lines that exceed terminal width are truncated.
 - **LayoutPreferSideBySide** - uses side-by-side when content fits within the terminal width, falls back to inline otherwise.
+
+With `LayoutInline`, a positive `WithWidth` wraps long lines at whitespace and aligns continuations under the text, past the line numbers and change marker. Colors and word emphasis continue across wraps. Whitespace is preserved; words longer than the available space split across lines. Widths too small for the gutter still allow at least one text column, and wide characters remain intact. Without a positive width, inline lines stay unwrapped, including the fallback from `LayoutPreferSideBySide`.
 
 ```go
 // Always side-by-side

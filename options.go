@@ -24,7 +24,7 @@ type config struct {
 	contextLines int
 	layout       Layout
 	colorMode    *bool // nil = auto-detect
-	width        int   // 0 = auto-detect terminal width
+	width        int   // 0 = auto-detect for side-by-side, unwrapped inline
 }
 
 func defaultConfig() config {
@@ -61,10 +61,12 @@ func WithColor(on bool) Option {
 	}
 }
 
-// WithWidth sets the terminal width for side-by-side layout and
-// LayoutPreferSideBySide decisions. Default is 0, which auto-detects
-// from the terminal. If detection fails (non-TTY), panels are not
-// truncated. Ignored in LayoutInline mode.
+// WithWidth sets the total output width, including line numbers and markers.
+// In LayoutInline, positive widths wrap lines with continuations indented
+// under the text. Zero (the default) leaves inline lines unwrapped.
+// Side-by-side layouts auto-detect zero widths; if detection fails, panels
+// are not truncated. LayoutPreferSideBySide's inline fallback is unwrapped.
+// Negative widths are treated as zero.
 func WithWidth(cols int) Option {
 	return func(c *config) {
 		if cols < 0 {

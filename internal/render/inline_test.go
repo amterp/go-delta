@@ -22,7 +22,7 @@ func markerStyles() Styles {
 }
 
 func TestRenderInlineEmpty(t *testing.T) {
-	result := RenderInline(nil, NoColorStyles())
+	result := RenderInline(nil, NoColorStyles(), 0)
 	if result != "" {
 		t.Errorf("expected empty, got %q", result)
 	}
@@ -42,7 +42,7 @@ func TestRenderInlineUnpairedLines(t *testing.T) {
 		},
 	}
 	s := markerStyles()
-	result := RenderInline(hunks, s)
+	result := RenderInline(hunks, s, 0)
 	// Unpaired: entire line styled with base color
 	if !strings.Contains(result, "[R:- hello]") {
 		t.Errorf("expected unpaired removed line, got:\n%s", result)
@@ -73,7 +73,7 @@ func TestRenderInlinePairedLinesHaveEmphasis(t *testing.T) {
 		},
 	}
 	s := markerStyles()
-	result := RenderInline(hunks, s)
+	result := RenderInline(hunks, s, 0)
 
 	// Paired lines should have emphasis markers on changed tokens
 	if !strings.Contains(result, "[RE:") {
@@ -107,7 +107,7 @@ func TestRenderInlineContextLines(t *testing.T) {
 		},
 	}
 	s := NoColorStyles()
-	result := RenderInline(hunks, s)
+	result := RenderInline(hunks, s, 0)
 	if !strings.Contains(result, "context") {
 		t.Errorf("expected context line, got:\n%s", result)
 	}
@@ -137,7 +137,7 @@ func TestRenderInlineHunkSeparator(t *testing.T) {
 		},
 	}
 	s := markerStyles()
-	result := RenderInline(hunks, s)
+	result := RenderInline(hunks, s, 0)
 	if !strings.Contains(result, "5 lines skipped") {
 		t.Errorf("expected '5 lines skipped', got:\n%s", result)
 	}

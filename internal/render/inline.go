@@ -11,7 +11,7 @@ import (
 // RenderInline produces an inline (unified-style) diff string from
 // annotated hunks. Paired lines get within-line emphasis; unpaired
 // lines are rendered entirely in their base color.
-func RenderInline(hunks []align.AnnotatedHunk, s Styles) string {
+func RenderInline(hunks []align.AnnotatedHunk, s Styles, width int) string {
 	if len(hunks) == 0 {
 		return ""
 	}
@@ -19,6 +19,7 @@ func RenderInline(hunks []align.AnnotatedHunk, s Styles) string {
 	maxOld, maxNew := maxLineNumbers(hunks)
 	oldWidth := digitCount(maxOld)
 	newWidth := digitCount(maxNew)
+	indent := oldWidth + newWidth + 6
 
 	var b strings.Builder
 
@@ -46,7 +47,7 @@ func RenderInline(hunks []align.AnnotatedHunk, s Styles) string {
 			switch {
 			case row.IsContext:
 				gutter := gutterInline(diff.OpEqual, oldNum, newNum, oldWidth, newWidth, s)
-				b.WriteString(gutter + "  " + row.Left.Content + "\n")
+				writeInlineLine(&b, gutter+"  "+row.Left.Content, width, indent)
 				oldNum++
 				newNum++
 
@@ -56,22 +57,22 @@ func RenderInline(hunks []align.AnnotatedHunk, s Styles) string {
 				insGutter := gutterInline(diff.OpInsert, oldNum, newNum, oldWidth, newWidth, s)
 
 				annotated := RenderAnnotatedLine(row.Pair.Alignment.Old, s.Removed, s.RemovedEmph)
-				b.WriteString(delGutter + s.Removed("- ") + annotated + "\n")
+				writeInlineLine(&b, delGutter+s.Removed("- ")+annotated, width, indent)
 
 				annotated = RenderAnnotatedLine(row.Pair.Alignment.New, s.Added, s.AddedEmph)
-				b.WriteString(insGutter + s.Added("+ ") + annotated + "\n")
+				writeInlineLine(&b, insGutter+s.Added("+ ")+annotated, width, indent)
 
 				oldNum++
 				newNum++
 
 			case row.Left != nil:
 				gutter := gutterInline(diff.OpDelete, oldNum, newNum, oldWidth, newWidth, s)
-				b.WriteString(gutter + s.Removed(fmt.Sprintf("- %s", row.Left.Content)) + "\n")
+				writeInlineLine(&b, gutter+s.Removed("- "+row.Left.Content), width, indent)
 				oldNum++
 
 			case row.Right != nil:
 				gutter := gutterInline(diff.OpInsert, oldNum, newNum, oldWidth, newWidth, s)
-				b.WriteString(gutter + s.Added(fmt.Sprintf("+ %s", row.Right.Content)) + "\n")
+				writeInlineLine(&b, gutter+s.Added("+ "+row.Right.Content), width, indent)
 				newNum++
 			}
 		}
