@@ -4,7 +4,9 @@ import (
 	"strconv"
 	"strings"
 	"unicode"
+	"unicode/utf8"
 
+	"github.com/clipperhouse/uax29/v2/graphemes"
 	"github.com/mattn/go-runewidth"
 )
 
@@ -15,9 +17,10 @@ func writeInlineLine(b *strings.Builder, line string, width, indent int) {
 		return
 	}
 
+	text := newInlineText(line)
 	textWidth := max(1, width-indent)
-	end := inlineBreak(line, textWidth, indent, indent)
-	if end == len(line) {
+	end := text.breakAt(0, textWidth, indent, indent)
+	if end == len(text.plain) {
 		b.WriteString(line)
 		b.WriteByte('\n')
 		return
@@ -25,14 +28,17 @@ func writeInlineLine(b *strings.Builder, line string, width, indent int) {
 
 	var styles wrapStyles
 	var sgr string
-	for first := true; len(line) > 0; first = false {
+	start := 0
+	rawStart := 0
+	for first := true; start < len(text.plain); first = false {
 		if !first {
 			b.WriteString(strings.Repeat(" ", indent))
 			b.WriteString(styles.hyperlink)
 			b.WriteString(sgr)
-			end = inlineBreak(line, textWidth, 0, indent)
+			end = text.breakAt(start, textWidth, 0, indent)
 		}
-		part := line[:end]
+		rawEnd := text.offsets[end]
+		part := line[rawStart:rawEnd]
 		b.WriteString(part)
 		styles.consume(part)
 		sgr = styles.sgrSequence()
@@ -43,44 +49,59 @@ func writeInlineLine(b *strings.Builder, line string, width, indent int) {
 			b.WriteString("\x1b]8;;\x1b\\")
 		}
 		b.WriteByte('\n')
-		line = line[end:]
+		rawStart = rawEnd
+		start = end
 	}
 }
 
-func inlineBreak(line string, width, prefixWidth, indent int) int {
-	columns := -prefixWidth
-	lastSpace := 0
-	spaceBoundary := false
+type inlineText struct {
+	plain   string
+	offsets []int
+}
+
+// Segment visible text so ANSI sequences inside a grapheme do not create break points.
+func newInlineText(line string) inlineText {
+	var plain strings.Builder
+	offsets := make([]int, 0, len(line)+1)
 	state := ansiNone
-	for i, r := range line {
+	for i := 0; i < len(line); {
+		r, size := utf8.DecodeRuneInString(line[i:])
 		prev := state
 		state = ansiNext(state, r)
-		if state != ansiNone || prev != ansiNone {
-			continue
+		if state == ansiNone && prev == ansiNone {
+			plain.WriteString(line[i : i+size])
+			for j := 0; j < size; j++ {
+				offsets = append(offsets, i+j)
+			}
 		}
-		rw := max(0, runewidth.RuneWidth(r))
-		if r == '\t' {
+		i += size
+	}
+	return inlineText{plain: plain.String(), offsets: append(offsets, len(line))}
+}
+
+func (t inlineText) breakAt(start, width, prefixWidth, indent int) int {
+	columns := -prefixWidth
+	lastSpace := 0
+	g := graphemes.FromString(t.plain[start:])
+	for g.Next() {
+		cluster := g.Value()
+		r, _ := utf8.DecodeRuneInString(cluster)
+		rw := runewidth.StringWidth(cluster)
+		if cluster == "\t" {
 			rw = 8 - (columns+indent)%8
 		}
-		if rw > 0 && !unicode.IsMark(r) && columns > 0 && columns+rw > width {
+		if rw > 0 && columns > 0 && columns+rw > width {
 			if lastSpace > 0 {
 				return lastSpace
 			}
-			return i
+			return start + g.Start()
 		}
 		columns += rw
 		if columns > 0 && unicode.IsSpace(r) {
-			lastSpace = i + len(string(r))
-			spaceBoundary = true
-		} else if unicode.IsMark(r) {
-			if spaceBoundary {
-				lastSpace = i + len(string(r))
-			}
-		} else {
-			spaceBoundary = false
+			lastSpace = start + g.End()
 		}
 	}
-	return len(line)
+	return len(t.plain)
 }
 
 // A physical newline must close styles before the continuation's blank gutter.

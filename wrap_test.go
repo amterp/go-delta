@@ -62,6 +62,45 @@ func TestInlineWidthDisabled(t *testing.T) {
 	}
 }
 
+func TestInlineWidthKeepsEmojiTogether(t *testing.T) {
+	for _, emoji := range []string{"👩🏽‍💻", "👩‍💻", "🇺🇸"} {
+		for _, color := range []bool{false, true} {
+			for _, width := range []int{9, 10} {
+				t.Run(fmt.Sprintf("%s/%t/%d", emoji, color, width), func(t *testing.T) {
+					got := DiffWith("", emoji+"Z", WithColor(color), WithWidth(width))
+					plain := sgrRe.ReplaceAllString(got, "")
+					if !strings.Contains(plain, emoji) {
+						t.Fatalf("split emoji across rows: %q", got)
+					}
+					var joined strings.Builder
+					for i, line := range strings.Split(strings.TrimSuffix(plain, "\n"), "\n") {
+						prefix := "        "
+						if i == 0 {
+							prefix = "  1 │ + "
+						}
+						if !strings.HasPrefix(line, prefix) {
+							t.Fatalf("wrong continuation indent: %q", line)
+						}
+						joined.WriteString(strings.TrimPrefix(line, prefix))
+					}
+					if joined.String() != emoji+"Z" {
+						t.Fatalf("lost text: %q", joined.String())
+					}
+				})
+			}
+		}
+	}
+}
+
+func TestInlineWidthKeepsStyledGraphemeTogether(t *testing.T) {
+	text := "👩\x1b[34m‍💻\x1b[0mZ"
+	got := DiffWith("", text, WithColor(false), WithWidth(10))
+	want := "  1 │ + 👩\x1b[34m‍💻\x1b[0m\n        Z\n"
+	if got != want {
+		t.Fatalf("want %q, got %q", want, got)
+	}
+}
+
 func TestInlineWidthMultiDigitGutter(t *testing.T) {
 	old := strings.Repeat("same\n", 10) + "removed words wrap"
 	new := strings.Repeat("same\n", 10) + "added words wrap"
