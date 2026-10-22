@@ -53,7 +53,7 @@ Color auto-detection respects `NO_COLOR` and `FORCE_COLOR` environment variables
 - **LayoutSideBySide** - old and new text in side-by-side panels. Lines that exceed terminal width are truncated.
 - **LayoutPreferSideBySide** - uses side-by-side when content fits within the terminal width, falls back to inline otherwise.
 
-With `LayoutInline`, a positive `WithWidth` wraps long lines at whitespace and aligns continuations under the text, past the line numbers and change marker. Colors and word emphasis continue across wraps. Whitespace is preserved; words longer than the available space split across lines. Widths too small for the gutter still allow at least one text column, and wide characters remain intact. Without a positive width, inline lines stay unwrapped, including the fallback from `LayoutPreferSideBySide`.
+With `LayoutInline`, a positive `WithWidth` wraps long lines at whitespace and aligns continuations under the text, past the line numbers and change marker. Colors and word emphasis continue across wraps. Whitespace is preserved; words longer than the available space split across lines. Tabs use eight-column stops. Widths too small for the gutter still allow at least one text column; a tab, wide character, or character with combining marks that cannot fit alone remains intact. Without a positive width, inline lines stay unwrapped, including the fallback from `LayoutPreferSideBySide`.
 
 ```go
 // Always side-by-side

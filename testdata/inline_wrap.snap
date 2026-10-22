@@ -1,0 +1,13 @@
+1 1 │   context words ⏎
+        span multiple ⏎
+        rows⏎
+2   │ - set alpha beta ⏎
+        gamma delta⏎
+  2 │ + set alpha zeta ⏎
+        theta delta⏎
+3   │ - removed text ⏎
+        without a match⏎
+  3 │ + !@#$%^&*()123456⏎
+        7890⏎
+4 4 │   last context ⏎
+        wraps too⏎

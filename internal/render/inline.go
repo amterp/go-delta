@@ -19,7 +19,7 @@ func RenderInline(hunks []align.AnnotatedHunk, s Styles, width int) string {
 	maxOld, maxNew := maxLineNumbers(hunks)
 	oldWidth := digitCount(maxOld)
 	newWidth := digitCount(maxNew)
-	indent := oldWidth + newWidth + 6
+	indent := oldWidth + newWidth + 5 + visibleWidth("│")
 
 	var b strings.Builder
 
