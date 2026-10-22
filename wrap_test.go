@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"unicode"
 
 	"github.com/mattn/go-runewidth"
 )
@@ -165,6 +166,56 @@ func TestInlineWidthSelectiveANSIResetsStayBounded(t *testing.T) {
 			t.Fatalf("lost content or alignment on line %d: %q", i, plain)
 		}
 	}
+}
+
+func TestInlineWidthPreservesSourceColorAcrossLogicalLines(t *testing.T) {
+	for _, text := range []string{
+		"\x1b[34mabcd\nEF\x1b[0m",
+		"\x1b[34mA\nBCDE\x1b[0m",
+		"\x1b[34mA\nBCDE\x1b[0m\nplain",
+		"\x1b[34mabcd\nEFGH\nIJ\x1b[0m",
+		"\x1b[34mabcd\nEF",
+	} {
+		t.Run(text, func(t *testing.T) {
+			unwrapped := DiffWith("", text, WithColor(false))
+			wrapped := DiffWith("", text, WithColor(false), WithWidth(10))
+			want := sourceLetterStyles(unwrapped)
+			if !strings.Contains(want, ":blue;") {
+				t.Fatal("expected source to color its letters blue")
+			}
+			if got := sourceLetterStyles(wrapped); got != want {
+				t.Fatalf("source color changed\nwant %q\ngot  %q\noutput %q", want, got, wrapped)
+			}
+			if !strings.Contains(wrapped, "\x1b[0m\n        \x1b[34m") {
+				t.Fatalf("continuation gutter inherited color: %q", wrapped)
+			}
+		})
+	}
+}
+
+func sourceLetterStyles(output string) string {
+	var trace strings.Builder
+	color := "plain"
+	writeLetters := func(text string) {
+		for _, r := range text {
+			if unicode.IsLetter(r) {
+				fmt.Fprintf(&trace, "%c:%s;", r, color)
+			}
+		}
+	}
+	start := 0
+	for _, loc := range sgrRe.FindAllStringSubmatchIndex(output, -1) {
+		writeLetters(output[start:loc[0]])
+		switch output[loc[2]:loc[3]] {
+		case "34":
+			color = "blue"
+		case "0", "":
+			color = "plain"
+		}
+		start = loc[1]
+	}
+	writeLetters(output[start:])
+	return trace.String()
 }
 
 func TestInlineWidthKeepsLogicalLines(t *testing.T) {

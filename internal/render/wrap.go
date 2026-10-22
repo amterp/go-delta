@@ -10,7 +10,7 @@ import (
 	"github.com/mattn/go-runewidth"
 )
 
-func writeInlineLine(b *strings.Builder, line string, width, indent int) {
+func writeInlineLine(b *strings.Builder, line string, width, indent int, styles *wrapStyles) {
 	if width <= 0 {
 		b.WriteString(line)
 		b.WriteByte('\n')
@@ -22,31 +22,31 @@ func writeInlineLine(b *strings.Builder, line string, width, indent int) {
 	end := text.breakAt(0, textWidth, indent, indent)
 	if end == len(text.plain) {
 		b.WriteString(line)
+		styles.consume(line)
 		b.WriteByte('\n')
 		return
 	}
 
-	var styles wrapStyles
-	var sgr string
 	start := 0
 	rawStart := 0
 	for first := true; start < len(text.plain); first = false {
 		if !first {
 			b.WriteString(strings.Repeat(" ", indent))
 			b.WriteString(styles.hyperlink)
-			b.WriteString(sgr)
+			b.WriteString(styles.sgrSequence())
 			end = text.breakAt(start, textWidth, 0, indent)
 		}
 		rawEnd := text.offsets[end]
 		part := line[rawStart:rawEnd]
 		b.WriteString(part)
 		styles.consume(part)
-		sgr = styles.sgrSequence()
-		if sgr != "" {
-			b.WriteString("\x1b[0m")
-		}
-		if styles.hyperlink != "" {
-			b.WriteString("\x1b]8;;\x1b\\")
+		if end < len(text.plain) {
+			if styles.sgrSequence() != "" {
+				b.WriteString("\x1b[0m")
+			}
+			if styles.hyperlink != "" {
+				b.WriteString("\x1b]8;;\x1b\\")
+			}
 		}
 		b.WriteByte('\n')
 		rawStart = rawEnd
@@ -104,7 +104,7 @@ func (t inlineText) breakAt(start, width, prefixWidth, indent int) int {
 	return len(t.plain)
 }
 
-// A physical newline must close styles before the continuation's blank gutter.
+// Inserted line breaks must close styles before the continuation's blank gutter.
 // Tracking current attributes bounds the ANSI sequences copied to continuations.
 type wrapStyles struct {
 	sgr       [108]string
