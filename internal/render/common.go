@@ -68,17 +68,26 @@ func gutterInline(kind diff.OpKind, oldNum, newNum, oldWidth, newWidth int, s St
 //   - IsPaired: both Left and Right are set, Pair has alignment data
 //   - Left only: unpaired delete
 //   - Right only: unpaired insert
+//
+// OldNum and NewNum are the 1-based line numbers of Left and Right in
+// their files, and are meaningful only when that side is set.
 type hunkRow struct {
 	IsContext bool
 	IsPaired  bool
-	Left      *diff.Line       // the old/removed line, or nil
-	Right     *diff.Line       // the new/added line, or nil
-	Pair      *align.LinePair  // non-nil only for paired rows
+	Left      *diff.Line      // the old/removed line, or nil
+	Right     *diff.Line      // the new/added line, or nil
+	Pair      *align.LinePair // non-nil only for paired rows
+	OldNum    int
+	NewNum    int
 }
 
 // walkHunk flattens an annotated hunk into a sequence of rows suitable
 // for either inline or side-by-side rendering. This eliminates the
 // fragile manual index-tracking that side-by-side previously required.
+//
+// Rows keep both the old and the new lines in file order. A paired row
+// sits at its removed line's position, so the unpaired added lines that
+// precede its added line are emitted just before it.
 func walkHunk(h align.AnnotatedHunk) []hunkRow {
 	// Build pair lookups
 	oldPairs := make(map[int]*align.LinePair)
@@ -89,38 +98,68 @@ func walkHunk(h align.AnnotatedHunk) []hunkRow {
 		newPairs[p.NewIdx] = true
 	}
 
+	oldNums := make([]int, len(h.Lines))
+	newNums := make([]int, len(h.Lines))
+	oldNum, newNum := h.OldStart, h.NewStart
+	for li, line := range h.Lines {
+		oldNums[li], newNums[li] = oldNum, newNum
+		if line.Kind != diff.OpInsert {
+			oldNum++
+		}
+		if line.Kind != diff.OpDelete {
+			newNum++
+		}
+	}
+
 	var rows []hunkRow
+	emitted := make([]bool, len(h.Lines))
+	emitInsert := func(li int) {
+		rows = append(rows, hunkRow{
+			Right:  &h.Lines[li],
+			NewNum: newNums[li],
+		})
+		emitted[li] = true
+	}
+
 	for li := 0; li < len(h.Lines); li++ {
 		line := h.Lines[li]
 		switch line.Kind {
 		case diff.OpEqual:
 			rows = append(rows, hunkRow{
 				IsContext: true,
-				Left:     &h.Lines[li],
-				Right:    &h.Lines[li],
+				Left:      &h.Lines[li],
+				Right:     &h.Lines[li],
+				OldNum:    oldNums[li],
+				NewNum:    newNums[li],
 			})
 
 		case diff.OpDelete:
 			if pair, ok := oldPairs[li]; ok {
+				for k := li + 1; k < pair.NewIdx; k++ {
+					if h.Lines[k].Kind == diff.OpInsert && !newPairs[k] && !emitted[k] {
+						emitInsert(k)
+					}
+				}
 				rows = append(rows, hunkRow{
 					IsPaired: true,
 					Left:     &h.Lines[li],
 					Right:    &h.Lines[pair.NewIdx],
 					Pair:     pair,
+					OldNum:   oldNums[li],
+					NewNum:   newNums[pair.NewIdx],
 				})
 			} else {
 				rows = append(rows, hunkRow{
-					Left: &h.Lines[li],
+					Left:   &h.Lines[li],
+					OldNum: oldNums[li],
 				})
 			}
 
 		case diff.OpInsert:
-			if newPairs[li] {
-				continue // already emitted by the paired delete
+			if newPairs[li] || emitted[li] {
+				continue // already emitted by a paired delete
 			}
-			rows = append(rows, hunkRow{
-				Right: &h.Lines[li],
-			})
+			emitInsert(li)
 		}
 	}
 	return rows

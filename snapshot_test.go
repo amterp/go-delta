@@ -210,3 +210,26 @@ func TestSnapshotInlineCaretShift(t *testing.T) {
 	result := DiffWith(old, new, WithColor(true))
 	snapshotTest(t, "inline_caret_shift", ansiToMarkers(result))
 }
+
+// A removed line that pairs with a later added line must not lift that
+// line above the added lines before it.
+func TestSnapshotInlinePairAfterAdditions(t *testing.T) {
+	old := "a\nend.\nc"
+	new := "a\nend. More words here\nsecond line\nshort.\nc"
+	result := DiffWith(old, new, WithColor(false))
+	snapshotTest(t, "inline_pair_after_additions", result)
+}
+
+func TestSnapshotSideBySidePairAfterAdditions(t *testing.T) {
+	old := "a\nend.\nc"
+	new := "a\nend. More words here\nsecond line\nshort.\nc"
+	result := DiffWith(old, new, WithColor(false), WithLayout(LayoutSideBySide), WithWidth(80))
+	snapshotTest(t, "sbs_pair_after_additions", result)
+}
+
+func TestSnapshotInlineEmphasisAfterAddition(t *testing.T) {
+	old := "x\nfoo bar"
+	new := "totally new\nfoo baz"
+	result := DiffWith(old, new, WithColor(true))
+	snapshotTest(t, "inline_emphasis_after_addition", ansiToMarkers(result))
+}

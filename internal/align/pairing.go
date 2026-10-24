@@ -33,9 +33,13 @@ type AnnotatedHunk struct {
 }
 
 // AnnotateHunks performs greedy forward-search line pairing on each hunk.
-// For each removed line, it scans forward through unpaired added lines,
-// tokenizes both, runs NW alignment, and pairs them if the distance is
-// below DistanceThreshold.
+// For each removed line, it scans forward through the added lines after
+// the last paired one, tokenizes both, runs NW alignment, and pairs them
+// if the distance is below DistanceThreshold.
+//
+// Pairs never cross: a later removed line pairs only with a later added
+// line. A paired row shows both lines together, so crossing pairs could
+// not keep both the old and the new lines in file order.
 func AnnotateHunks(hunks []diff.Hunk) []AnnotatedHunk {
 	result := make([]AnnotatedHunk, len(hunks))
 	for i, h := range hunks {
@@ -47,8 +51,7 @@ func AnnotateHunks(hunks []diff.Hunk) []AnnotatedHunk {
 func annotateHunk(h diff.Hunk) AnnotatedHunk {
 	ah := AnnotatedHunk{Hunk: h}
 
-	// Track which added lines have been paired
-	paired := make(map[int]bool)
+	lastPairedNew := -1
 
 	for i, line := range h.Lines {
 		if line.Kind != diff.OpDelete {
@@ -60,15 +63,12 @@ func annotateHunk(h diff.Hunk) AnnotatedHunk {
 			continue // too many tokens, skip alignment
 		}
 
-		// Scan forward for an unpaired added line
-		for j := i + 1; j < len(h.Lines); j++ {
+		// Scan forward for an added line past the last paired one
+		for j := max(i, lastPairedNew) + 1; j < len(h.Lines); j++ {
 			if h.Lines[j].Kind == diff.OpEqual {
 				break // stop at context boundary
 			}
 			if h.Lines[j].Kind != diff.OpInsert {
-				continue
-			}
-			if paired[j] {
 				continue
 			}
 
@@ -84,7 +84,7 @@ func annotateHunk(h diff.Hunk) AnnotatedHunk {
 					NewIdx:    j,
 					Alignment: alignment,
 				})
-				paired[j] = true
+				lastPairedNew = j
 				break // this removed line is now paired
 			}
 		}

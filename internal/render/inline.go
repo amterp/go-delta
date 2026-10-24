@@ -43,23 +43,15 @@ func RenderInline(hunks []align.AnnotatedHunk, s Styles, width int) string {
 			b.WriteString("\n\n")
 		}
 
-		rows := walkHunk(h)
-
-		oldNum := h.OldStart
-		newNum := h.NewStart
-
-		for _, row := range rows {
+		for _, row := range walkHunk(h) {
 			switch {
 			case row.IsContext:
-				gutter := gutterInline(diff.OpEqual, oldNum, newNum, oldWidth, newWidth, s)
+				gutter := gutterInline(diff.OpEqual, row.OldNum, row.NewNum, oldWidth, newWidth, s)
 				writeInlineLine(&b, gutter+"  "+row.Left.Content, width, indent, &activeStyles)
-				oldNum++
-				newNum++
 
 			case row.IsPaired:
-				// Build both gutters before incrementing either counter
-				delGutter := gutterInline(diff.OpDelete, oldNum, newNum, oldWidth, newWidth, s)
-				insGutter := gutterInline(diff.OpInsert, oldNum, newNum, oldWidth, newWidth, s)
+				delGutter := gutterInline(diff.OpDelete, row.OldNum, row.NewNum, oldWidth, newWidth, s)
+				insGutter := gutterInline(diff.OpInsert, row.OldNum, row.NewNum, oldWidth, newWidth, s)
 
 				annotated := RenderAnnotatedLine(row.Pair.Alignment.Old, s.Removed, s.RemovedEmph)
 				writeInlineLine(&b, delGutter+s.Removed("- ")+annotated, width, indent, &activeStyles)
@@ -67,18 +59,13 @@ func RenderInline(hunks []align.AnnotatedHunk, s Styles, width int) string {
 				annotated = RenderAnnotatedLine(row.Pair.Alignment.New, s.Added, s.AddedEmph)
 				writeInlineLine(&b, insGutter+s.Added("+ ")+annotated, width, indent, &activeStyles)
 
-				oldNum++
-				newNum++
-
 			case row.Left != nil:
-				gutter := gutterInline(diff.OpDelete, oldNum, newNum, oldWidth, newWidth, s)
+				gutter := gutterInline(diff.OpDelete, row.OldNum, row.NewNum, oldWidth, newWidth, s)
 				writeInlineLine(&b, gutter+s.Removed("- "+row.Left.Content), width, indent, &activeStyles)
-				oldNum++
 
 			case row.Right != nil:
-				gutter := gutterInline(diff.OpInsert, oldNum, newNum, oldWidth, newWidth, s)
+				gutter := gutterInline(diff.OpInsert, row.OldNum, row.NewNum, oldWidth, newWidth, s)
 				writeInlineLine(&b, gutter+s.Added("+ "+row.Right.Content), width, indent, &activeStyles)
-				newNum++
 			}
 		}
 	}

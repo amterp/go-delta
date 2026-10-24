@@ -73,6 +73,29 @@ func TestAnnotateHunksGreedyOrdering(t *testing.T) {
 	}
 }
 
+func TestAnnotateHunksPairsDoNotCross(t *testing.T) {
+	// Each remove resembles the add on the other side of it. Pairing
+	// both would put "foo baz" above "baz quux" on the new side.
+	h := diff.Hunk{
+		OldStart: 1,
+		NewStart: 1,
+		Lines: []diff.Line{
+			{Kind: diff.OpDelete, Content: "foo bar"},
+			{Kind: diff.OpDelete, Content: "baz qux"},
+			{Kind: diff.OpInsert, Content: "baz quux"},
+			{Kind: diff.OpInsert, Content: "foo baz"},
+		},
+	}
+	pairs := AnnotateHunks([]diff.Hunk{h})[0].Pairs
+
+	if len(pairs) != 1 {
+		t.Fatalf("expected 1 pair, got %d", len(pairs))
+	}
+	if pairs[0].OldIdx != 0 || pairs[0].NewIdx != 3 {
+		t.Errorf("expected pair (0,3), got (%d,%d)", pairs[0].OldIdx, pairs[0].NewIdx)
+	}
+}
+
 func TestAnnotateHunksStopsAtContextBoundary(t *testing.T) {
 	// A context line between a remove and add should prevent pairing
 	h := diff.Hunk{

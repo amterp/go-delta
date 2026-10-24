@@ -38,44 +38,33 @@ func buildSBSItems(hunks []align.AnnotatedHunk, s Styles, maxPanelWidth int) (it
 			items = append(items, sbsItem{separator: s.Separator(line)})
 		}
 
-		rows := walkHunk(h)
-
-		oldNum := h.OldStart
-		newNum := h.NewStart
-
-		for _, row := range rows {
+		for _, row := range walkHunk(h) {
 			var left, right string
 
 			switch {
 			case row.IsContext:
-				left = sbsPanelContent(s.LineNum(formatLineNum(oldNum, oldNumWidth)),
+				left = sbsPanelContent(s.LineNum(formatLineNum(row.OldNum, oldNumWidth)),
 					s.Plain("  "+row.Left.Content), maxPanelWidth)
-				right = sbsPanelContent(s.LineNum(formatLineNum(newNum, newNumWidth)),
+				right = sbsPanelContent(s.LineNum(formatLineNum(row.NewNum, newNumWidth)),
 					s.Plain("  "+row.Right.Content), maxPanelWidth)
-				oldNum++
-				newNum++
 
 			case row.IsPaired:
 				leftContent := RenderAnnotatedLine(row.Pair.Alignment.Old, s.Removed, s.RemovedEmph)
-				left = sbsPanelContent(s.LineNum(formatLineNum(oldNum, oldNumWidth)),
+				left = sbsPanelContent(s.LineNum(formatLineNum(row.OldNum, oldNumWidth)),
 					s.Removed("- ")+leftContent, maxPanelWidth)
 				rightContent := RenderAnnotatedLine(row.Pair.Alignment.New, s.Added, s.AddedEmph)
-				right = sbsPanelContent(s.LineNum(formatLineNum(newNum, newNumWidth)),
+				right = sbsPanelContent(s.LineNum(formatLineNum(row.NewNum, newNumWidth)),
 					s.Added("+ ")+rightContent, maxPanelWidth)
-				oldNum++
-				newNum++
 
 			case row.Left != nil:
-				left = sbsPanelContent(s.LineNum(formatLineNum(oldNum, oldNumWidth)),
+				left = sbsPanelContent(s.LineNum(formatLineNum(row.OldNum, oldNumWidth)),
 					s.Removed("- "+row.Left.Content), maxPanelWidth)
 				right = sbsEmptyContent(s, newNumWidth)
-				oldNum++
 
 			case row.Right != nil:
 				left = sbsEmptyContent(s, oldNumWidth)
-				right = sbsPanelContent(s.LineNum(formatLineNum(newNum, newNumWidth)),
+				right = sbsPanelContent(s.LineNum(formatLineNum(row.NewNum, newNumWidth)),
 					s.Added("+ "+row.Right.Content), maxPanelWidth)
-				newNum++
 			}
 
 			if vw := visibleWidth(left); vw > maxLeftVW {
